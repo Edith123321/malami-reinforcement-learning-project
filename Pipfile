@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+gymnasium = ">=0.29.0"
+stable-baselines3 = ">=2.3.0"
+torch = ">=2.1.0"
+pygame = ">=2.5.0"
+matplotlib = ">=3.8.0"
+numpy = ">=1.26.0"
+tqdm = ">=4.66.0"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
