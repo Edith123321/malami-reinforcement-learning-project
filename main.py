@@ -16,6 +16,7 @@ import sys
 import json
 import time
 import numpy as np
+from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -30,9 +31,9 @@ def cmd_train(algo: str = "all"):
 
     if "dqn" in algos:
         from training.dqn_training import run_dqn_hyperparameter_search
-        print("\n" + "═"*60)
+        print("\n" + "="*60)
         print("  Training DQN")
-        print("═"*60)
+        print("="*60)
         all_results["DQN"] = run_dqn_hyperparameter_search()
 
     pg_results = {}
@@ -42,23 +43,23 @@ def cmd_train(algo: str = "all"):
         run_a2c_hyperparameter_search,
     )
     if "reinforce" in algos:
-        print("\n" + "═"*60)
+        print("\n" + "="*60)
         print("  Training REINFORCE")
-        print("═"*60)
+        print("="*60)
         pg_results["REINFORCE"] = run_reinforce_hyperparameter_search()
         all_results["REINFORCE"] = pg_results["REINFORCE"]
 
     if "ppo" in algos:
-        print("\n" + "═"*60)
+        print("\n" + "="*60)
         print("  Training PPO")
-        print("═"*60)
+        print("="*60)
         pg_results["PPO"] = run_ppo_hyperparameter_search()
         all_results["PPO"] = pg_results["PPO"]
 
     if "a2c" in algos:
-        print("\n" + "═"*60)
+        print("\n" + "="*60)
         print("  Training A2C")
-        print("═"*60)
+        print("="*60)
         pg_results["A2C"] = run_a2c_hyperparameter_search()
         all_results["A2C"] = pg_results["A2C"]
 
@@ -66,9 +67,9 @@ def cmd_train(algo: str = "all"):
     _generate_plots(all_results)
 
     # Print summary
-    print("\n" + "═"*60)
+    print("\n" + "="*60)
     print("  TRAINING COMPLETE – SUMMARY")
-    print("═"*60)
+    print("="*60)
     for name, res in all_results.items():
         print(f"  {name:<12} best mean reward: {res.get('best_score', 'N/A'):.2f}")
 
@@ -84,8 +85,6 @@ def _generate_plots(all_results: dict):
 
     os.makedirs("plots", exist_ok=True)
 
-    # Build dummy loggers from results for plotting
-    # (In practice, you'd pass the live loggers; here we reconstruct from results)
     print("\n[Plots] Generating visualisations...")
 
     # Generalisation plot from best models
@@ -137,12 +136,11 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
     env = MalamiEnv(render_mode=render_mode)
     
     # Use a specific student profile for demonstration
-    # You can customize this to show different learning styles
     student_profile = StudentProfile(
-        learning_rate=0.6,      # Average learning speed
-        retention=0.7,          # Good retention
+        learning_rate=0.6,
+        retention=0.7,
         engagement_sensitivity=0.5,
-        prior_knowledge=0.2     # Some prior knowledge
+        prior_knowledge=0.2
     )
     env.set_student_profile(student_profile)
 
@@ -153,17 +151,17 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
         model = _load_sb3_model(algo.upper(), path)
 
     print("\n" + "="*70)
-    print("  🎓 MALAMI ADAPTIVE LEARNING TUTOR - 6th Grade Biology")
+    print("  MALAMI ADAPTIVE LEARNING TUTOR - 6th Grade Biology")
     print("="*70)
-    print(f"  🤖 AI Tutor: {algo.upper()} Algorithm")
-    print(f"  📚 Subject: Biology (Cell Structure, Photosynthesis, etc.)")
-    print(f"  👨‍🎓 Student: 6th Grader (Learning Rate: {student_profile.learning_rate:.2f})")
+    print(f"  AI Tutor: {algo.upper()} Algorithm")
+    print(f"  Subject: Biology (Cell Structure, Photosynthesis, Genetics, Evolution, Ecology, Human Body)")
+    print(f"  Student: 6th Grader (Learning Rate: {student_profile.learning_rate:.2f})")
     print("="*70)
     
     if gui:
-        print("\n  🖥️  Opening interactive GUI...\n")
+        print("\n  Opening interactive GUI...\n")
     else:
-        print("\n  📊 Console visualization mode:\n")
+        print("\n  Console visualization mode:\n")
 
     # Track learning metrics for analysis
     learning_history = {
@@ -174,18 +172,17 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
         "rewards": []
     }
 
-    for ep in range(3):  # Run 3 episodes to show progression
+    for ep in range(3):
         obs, info = env.reset()
         done = False
         ep_reward = 0.0
         step = 0
-        mastery_gains = []
         
-        print(f"\n{'─'*70}")
-        print(f"  📖 EPISODE {ep+1}: Learning Session")
-        print(f"{'─'*70}")
+        print(f"\n{'-'*70}")
+        print(f"  EPISODE {ep+1}: Learning Session")
+        print(f"{'-'*70}")
         
-        while not done and step < 50:  # Max 50 steps per session
+        while not done and step < 50:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, term, trunc, info = env.step(int(action))
             ep_reward += reward
@@ -213,69 +210,57 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
             learning_history["rewards"].append(reward)
             
             if not gui:
-                # Enhanced console output with visual indicators
+                # Console output with visual indicators
                 mastery_bar = "█" * int(mastery * 20) + "░" * (20 - int(mastery * 20))
-                engagement_icon = "😊" if engagement > 0.7 else "😐" if engagement > 0.3 else "😟"
+                engagement_icon = "H" if engagement > 0.7 else "M" if engagement > 0.3 else "L"
                 
-                # Color coding for actions
-                action_colors = {
-                    "Video Lesson": "📺",
-                    "Practice Quiz": "📝",
-                    "Problem Solving": "💡",
-                    "Review Summary": "📚",
-                    "Adaptive Hint": "💭",
-                    "New Topic": "✨",
-                    "Remediation": "🔄"
-                }
-                action_icon = action_colors.get(action_name, "⚡")
-                
-                print(f"\n  Step {step:2d} | {action_icon} {action_name:<16} | "
-                      f"🎯 Mastery: [{mastery_bar}] {mastery:.1%} | "
-                      f"❤️ Engagement: {engagement_icon} {engagement:.0%} | "
-                      f"🏆 Reward: {reward:+.1f}")
+                print(f"\n  Step {step:2d} | {action_name:<16} | "
+                      f"Mastery: [{mastery_bar}] {mastery:.1%} | "
+                      f"Engagement: {engagement_icon} {engagement:.0%} | "
+                      f"Reward: {reward:+.1f}")
                 
                 # Show adaptive hints based on student state
                 if mastery < 0.3 and action_name in ["New Topic", "Problem Solving"]:
-                    print(f"         💡 AI Insight: Student struggling. Providing extra support...")
+                    print(f"         AI Insight: Student struggling. Providing extra support...")
                 elif engagement < 0.4:
-                    print(f"         ⚠️  AI Insight: Engagement dropping. Switching to engaging activity...")
+                    print(f"         AI Insight: Engagement dropping. Switching to engaging activity...")
                 elif mastery > 0.8 and action_name == "Review Summary":
-                    print(f"         🌟 AI Insight: Student mastered this topic well! Ready for next concept.")
+                    print(f"         AI Insight: Student mastered this topic well! Ready for next concept.")
             
             if gui:
-                time.sleep(0.3)  # Slower for GUI to allow observation
+                time.sleep(0.3)
             
             # Check if student has mastered the current topic
             if mastery >= 0.8 and not done:
-                print(f"         ✅ Topic mastered! Moving to next concept...")
+                print(f"         Topic mastered! Moving to next concept...")
         
         # Episode summary
         avg_mastery = np.mean(learning_history["mastery"][-10:]) if learning_history["mastery"] else 0
         final_topics = info.get('topics_completed', 0)
         
-        print(f"\n{'─'*70}")
-        print(f"  📊 Episode {ep+1} Summary:")
-        print(f"     • Total Steps: {step}")
-        print(f"     • Total Reward: {ep_reward:.1f}")
-        print(f"     • Topics Completed: {final_topics}/{NUM_TOPICS}")
-        print(f"     • Final Mastery: {mastery:.1%}")
-        print(f"     • Avg Engagement: {np.mean(learning_history['engagement']):.1%}")
+        print(f"\n{'-'*70}")
+        print(f"  Episode {ep+1} Summary:")
+        print(f"     Total Steps: {step}")
+        print(f"     Total Reward: {ep_reward:.1f}")
+        print(f"     Topics Completed: {final_topics}/{NUM_TOPICS}")
+        print(f"     Final Mastery: {mastery:.1%}")
+        print(f"     Avg Engagement: {np.mean(learning_history['engagement']):.1%}")
         
         # Adaptive feedback based on performance
         if avg_mastery > 0.7:
-            print(f"     🎉 Great progress! Student is learning effectively.")
+            print(f"     Great progress! Student is learning effectively.")
         elif avg_mastery > 0.4:
-            print(f"     👍 Good effort. Student is making steady progress.")
+            print(f"     Good effort. Student is making steady progress.")
         else:
-            print(f"     🤔 Student needs additional support. AI adjusting strategy...")
+            print(f"     Student needs additional support. AI adjusting strategy...")
         
         if final_topics >= NUM_TOPICS:
-            print(f"\n  🎉🎉🎉 CONGRATULATIONS! Student completed all topics! 🎉🎉🎉")
+            print(f"\n  CONGRATULATIONS! Student completed all topics!")
             break
     
     # Final comprehensive analysis
     print("\n" + "="*70)
-    print("  📈 LEARNING ANALYSIS - Adaptive Tutor Performance")
+    print("  LEARNING ANALYSIS - Adaptive Tutor Performance")
     print("="*70)
     
     # Calculate learning metrics
@@ -283,28 +268,28 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
         mastery_progress = learning_history["mastery"][-1] - learning_history["mastery"][0] if len(learning_history["mastery"]) > 1 else 0
         avg_reward = np.mean(learning_history["rewards"])
         
-        print(f"\n  🧠 Learning Effectiveness:")
-        print(f"     • Mastery Gain: {mastery_progress:+.1%}")
-        print(f"     • Final Mastery: {learning_history['mastery'][-1]:.1%}")
-        print(f"     • Average Reward per Step: {avg_reward:.2f}")
+        print(f"\n  Learning Effectiveness:")
+        print(f"     Mastery Gain: {mastery_progress:+.1%}")
+        print(f"     Final Mastery: {learning_history['mastery'][-1]:.1%}")
+        print(f"     Average Reward per Step: {avg_reward:.2f}")
         
-        print(f"\n  🎯 AI Tutor Strategy Analysis:")
+        print(f"\n  AI Tutor Strategy Analysis:")
         action_counts = Counter(learning_history["actions"])
         for action, count in action_counts.most_common(3):
-            print(f"     • {action}: {count} times ({count/len(learning_history['actions']):.0%})")
+            print(f"     {action}: {count} times ({count/len(learning_history['actions']):.0%})")
         
         # Engagement pattern
         engagement_trend = learning_history["engagement"][-1] - learning_history["engagement"][0]
-        print(f"\n  ❤️ Engagement Pattern:")
+        print(f"\n  Engagement Pattern:")
         if engagement_trend > 0:
-            print(f"     • Engagement increased by {engagement_trend:.1%} - Student became more interested!")
+            print(f"     Engagement increased by {engagement_trend:.1%} - Student became more interested!")
         elif engagement_trend < -0.2:
-            print(f"     • Engagement decreased - Student may need more varied activities")
+            print(f"     Engagement decreased - Student may need more varied activities")
         else:
-            print(f"     • Engagement stable - Consistent learning experience")
+            print(f"     Engagement stable - Consistent learning experience")
     
     print("\n" + "="*70)
-    print("  💡 Adaptive Learning Summary:")
+    print("  Adaptive Learning Summary:")
     print("     The AI tutor successfully adjusted teaching strategies based on")
     print("     the student's mastery level and engagement, providing personalized")
     print("     learning experiences to maximize knowledge acquisition.")
@@ -312,7 +297,7 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
     
     env.close()
     
-    # Optional: Generate a learning progress chart
+    # Generate a learning progress chart
     if not gui:
         try:
             import matplotlib.pyplot as plt
@@ -344,9 +329,10 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
             plt.tight_layout()
             plt.savefig("plots/learning_progress.png", dpi=100, bbox_inches='tight')
             plt.show()
-            print("\n  📊 Learning progress chart saved to: plots/learning_progress.png")
+            print("\n  Learning progress chart saved to: plots/learning_progress.png")
         except:
             pass
+
 
 def cmd_random():
     """
@@ -356,7 +342,6 @@ def cmd_random():
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
 
     print("[Random Demo] Running random policy...")
     os.makedirs("results/random_demo", exist_ok=True)
@@ -401,11 +386,9 @@ def cmd_random():
 
     ax = axes[1, 0]
     ax.set_facecolor("#12182C")
-    from collections import Counter
-    action_names = env.get_action_name
     counts = Counter(actions)
     names_list = [env.get_action_name(i) for i in range(env.action_space.n)]
-    vals  = [counts.get(i, 0) for i in range(env.action_space.n)]
+    vals = [counts.get(i, 0) for i in range(env.action_space.n)]
     colors = ["#3B82F6", "#F59E0B", "#A78BFA", "#6B7280", "#10B981",
               "#10B981", "#EF4444", "#3B82F6", "#A78BFA"]
     bars = ax.barh(names_list, vals, color=colors, alpha=0.85)
@@ -450,18 +433,14 @@ def cmd_evaluate():
         "A2C": ("A2C", "models/pg/a2c_best.zip"),
     }
 
-    # Unseen profiles: fast learner, slow learner, anxious, high prior
-    rng = np.random.default_rng(seed=12345)
-
     for algo, (algo_cls, path) in model_map.items():
         if not os.path.exists(path):
             print(f"  [skip] {algo} model not found.")
             continue
         model = _load_sb3_model(algo_cls, path)
-        # Use seeds > 9999 to ensure unseen profiles
         result = evaluate_model(model, lambda s=42: MalamiEnv(seed=s + 9999), n_episodes=50)
         gen_results[algo] = result
-        print(f"  {algo}: mean={result['mean_reward']:.2f} ± {result['std_reward']:.2f} "
+        print(f"  {algo}: mean={result['mean_reward']:.2f} +- {result['std_reward']:.2f} "
               f"| topics={result['mean_topics']:.2f}")
 
     if gen_results:
@@ -470,7 +449,7 @@ def cmd_evaluate():
         print("  No models found. Train first with: python main.py train")
 
 
-# ─── CLI ───────────────────────────────────────────────────────────────────────
+# CLI
 
 def main():
     parser = argparse.ArgumentParser(description="Malami – RL Adaptive Tutor")

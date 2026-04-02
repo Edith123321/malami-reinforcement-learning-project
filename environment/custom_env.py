@@ -146,7 +146,7 @@ class MalamiEnv(gym.Env):
         # Return observation and info (current_topic as INTEGER)
         return self._get_obs(), {
             "topics_completed": 0,
-            "current_topic": self.current_topic,  # Integer, not string
+            "current_topic": self.current_topic,
             "mastery_current": float(self.topic_masteries[self.current_topic]),
             "engagement": self.engagement
         }
@@ -181,7 +181,7 @@ class MalamiEnv(gym.Env):
         # Build info dictionary
         info.update({
             "topics_completed": topics_done,
-            "current_topic": self.current_topic,  # Integer
+            "current_topic": self.current_topic,
             "engagement": self.engagement,
             "step": self.step_count,
             "mastery_current": float(self.topic_masteries[self.current_topic]),
@@ -195,9 +195,9 @@ class MalamiEnv(gym.Env):
     def render(self):
         """Render the environment."""
         if self._renderer is None:
-            from environment.rendering import MalamiRenderer
-            self._renderer = MalamiRenderer()
-        self._renderer.render(self._build_render_state())
+            from environment.visualization import MalamiVisualizer
+            self._renderer = MalamiVisualizer()
+        self._renderer.render(self._build_render_state(), None)
 
     def close(self):
         """Close the environment."""
@@ -350,6 +350,14 @@ class MalamiEnv(gym.Env):
             "step": self.step_count,
             "recent_scores": self.recent_scores,
             "consecutive_fails": self.consecutive_fails,
+            "current_mastery": float(self.topic_masteries[self.current_topic]),
+            "topics_completed": int(np.sum(self.topic_masteries >= MASTERY_THRESHOLD)),
+            "total_topics": NUM_TOPICS,
+            "student_id": getattr(self, 'student_id', 'demo_001'),
+            "grade_level": 6,
+            "learning_rate": self.profile.learning_rate,
+            "motivation": self.engagement,
+            "fatigue_level": 1.0 - self.engagement * 0.5
         }
 
     def get_action_name(self, action: int) -> str:
