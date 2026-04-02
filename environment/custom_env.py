@@ -190,6 +190,13 @@ class MalamiEnv(gym.Env):
         if self.render_mode == "human":
             self.render()
         
+        if action == ACTION_NEW_TOPIC:
+          if hasattr(self, 'last_new_topic_step'):
+            steps_since_last = self.step_count - self.last_new_topic_step
+            if steps_since_last < 5:  # Can't use New Topic more than once every 5 steps
+                reward -= 2.0
+                info["event"] = "Action on cooldown"
+        
         return self._get_obs(), float(reward), terminated, truncated, info
 
     def render(self):
@@ -278,13 +285,23 @@ class MalamiEnv(gym.Env):
                 reward = -0.3
 
         elif action == ACTION_NEW_TOPIC:
-            if m >= MASTERY_THRESHOLD and self.current_topic < NUM_TOPICS - 1:
-                reward = 3.0 + p.curiosity
-            elif m < 0.5:
-                reward = -2.0
-                self.engagement = max(0.0, self.engagement - 0.08)
-            else:
-                reward = m * 2.0
+         if m >= MASTERY_THRESHOLD and self.current_topic < NUM_TOPICS - 1:
+             # Legitimate advancement
+             reward = 8.0 + p.curiosity  # Increased reward for legitimate advancement
+             info["event"] = f"Advanced to next topic"
+         elif m < MASTERY_THRESHOLD:
+             # Penalize trying to advance without mastery
+             reward = -5.0  # Much stronger penalty
+             self.engagement = max(0.0, self.engagement - 0.15)
+             self.consecutive_fails += 1
+             info["event"] = "Cannot advance - mastery too low"
+         else:
+             # Last topic already mastered
+             reward = -2.0
+             info["event"] = "No more topics to advance to"
+         
+         # Add cooldown to prevent spamming
+         self.last_new_topic_step = self.step_count
 
         elif action == ACTION_REMEDIATION:
             if self.consecutive_fails >= 3 and self.current_topic > 0:
