@@ -2,11 +2,6 @@
 Malami - Pygame Visualisation
 ==============================
 Rich 2D GUI showing:
-  - Per-topic mastery progress bars with colour gradient
-  - Engagement meter
-  - Recent quiz scores sparkline
-  - Agent action history
-  - Step counter and topic tracker
   - Live reward display
 """
 

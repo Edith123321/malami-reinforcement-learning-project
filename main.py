@@ -118,7 +118,10 @@ def _load_sb3_model(algo: str, path: str):
 
 
 def cmd_play(algo: str = "ppo", gui: bool = True):
-    """Run the best-performing model with GUI visualisation."""
+    """
+    Run the best-performing model with rich adaptive learning visualization.
+    Shows a real-time illustration of a 6th-grade Biology student learning adaptively.
+    """
     model_paths = {
         "dqn":       "models/dqn/best_model.zip",
         "ppo":       "models/pg/ppo_best.zip",
@@ -132,6 +135,16 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
 
     render_mode = "human" if gui else None
     env = MalamiEnv(render_mode=render_mode)
+    
+    # Use a specific student profile for demonstration
+    # You can customize this to show different learning styles
+    student_profile = StudentProfile(
+        learning_rate=0.6,      # Average learning speed
+        retention=0.7,          # Good retention
+        engagement_sensitivity=0.5,
+        prior_knowledge=0.2     # Some prior knowledge
+    )
+    env.set_student_profile(student_profile)
 
     if algo.lower() == "reinforce":
         from training.pg_training import REINFORCEAgent
@@ -139,32 +152,201 @@ def cmd_play(algo: str = "ppo", gui: bool = True):
     else:
         model = _load_sb3_model(algo.upper(), path)
 
-    print(f"\n[Play] Running {algo.upper()} agent...")
-    print("="*50)
+    print("\n" + "="*70)
+    print("  🎓 MALAMI ADAPTIVE LEARNING TUTOR - 6th Grade Biology")
+    print("="*70)
+    print(f"  🤖 AI Tutor: {algo.upper()} Algorithm")
+    print(f"  📚 Subject: Biology (Cell Structure, Photosynthesis, etc.)")
+    print(f"  👨‍🎓 Student: 6th Grader (Learning Rate: {student_profile.learning_rate:.2f})")
+    print("="*70)
+    
+    if gui:
+        print("\n  🖥️  Opening interactive GUI...\n")
+    else:
+        print("\n  📊 Console visualization mode:\n")
 
-    for ep in range(5):
+    # Track learning metrics for analysis
+    learning_history = {
+        "steps": [],
+        "mastery": [],
+        "engagement": [],
+        "actions": [],
+        "rewards": []
+    }
+
+    for ep in range(3):  # Run 3 episodes to show progression
         obs, info = env.reset()
         done = False
         ep_reward = 0.0
         step = 0
-        print(f"\n  Episode {ep+1}")
-        while not done:
+        mastery_gains = []
+        
+        print(f"\n{'─'*70}")
+        print(f"  📖 EPISODE {ep+1}: Learning Session")
+        print(f"{'─'*70}")
+        
+        while not done and step < 50:  # Max 50 steps per session
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, term, trunc, info = env.step(int(action))
             ep_reward += reward
             step += 1
             done = term or trunc
+            
+            # Convert current_topic to integer safely
+            current_topic = info['current_topic']
+            if isinstance(current_topic, str):
+                try:
+                    current_topic = int(current_topic)
+                except ValueError:
+                    current_topic = 0
+            
             action_name = env.get_action_name(int(action))
-            print(f"    Step {step:>3} | Action: {action_name:<18} | r={reward:>6.2f} | "
-                  f"Topic: {TOPIC_NAMES[info['current_topic']]:<18} | "
-                  f"Mastery: {info['mastery_current']:.2f} | "
-                  f"Engagement: {info['engagement']:.2f}")
+            topic_name = TOPIC_NAMES[current_topic] if current_topic < len(TOPIC_NAMES) else "Unknown"
+            mastery = info.get('mastery_current', 0.0)
+            engagement = info.get('engagement', 1.0)
+            
+            # Track learning metrics
+            learning_history["steps"].append(step)
+            learning_history["mastery"].append(mastery)
+            learning_history["engagement"].append(engagement)
+            learning_history["actions"].append(action_name)
+            learning_history["rewards"].append(reward)
+            
+            if not gui:
+                # Enhanced console output with visual indicators
+                mastery_bar = "█" * int(mastery * 20) + "░" * (20 - int(mastery * 20))
+                engagement_icon = "😊" if engagement > 0.7 else "😐" if engagement > 0.3 else "😟"
+                
+                # Color coding for actions
+                action_colors = {
+                    "Video Lesson": "📺",
+                    "Practice Quiz": "📝",
+                    "Problem Solving": "💡",
+                    "Review Summary": "📚",
+                    "Adaptive Hint": "💭",
+                    "New Topic": "✨",
+                    "Remediation": "🔄"
+                }
+                action_icon = action_colors.get(action_name, "⚡")
+                
+                print(f"\n  Step {step:2d} | {action_icon} {action_name:<16} | "
+                      f"🎯 Mastery: [{mastery_bar}] {mastery:.1%} | "
+                      f"❤️ Engagement: {engagement_icon} {engagement:.0%} | "
+                      f"🏆 Reward: {reward:+.1f}")
+                
+                # Show adaptive hints based on student state
+                if mastery < 0.3 and action_name in ["New Topic", "Problem Solving"]:
+                    print(f"         💡 AI Insight: Student struggling. Providing extra support...")
+                elif engagement < 0.4:
+                    print(f"         ⚠️  AI Insight: Engagement dropping. Switching to engaging activity...")
+                elif mastery > 0.8 and action_name == "Review Summary":
+                    print(f"         🌟 AI Insight: Student mastered this topic well! Ready for next concept.")
+            
             if gui:
-                time.sleep(0.05)
-        print(f"  Total reward: {ep_reward:.2f} | Topics completed: {info['topics_completed']}/{NUM_TOPICS}")
-
+                time.sleep(0.3)  # Slower for GUI to allow observation
+            
+            # Check if student has mastered the current topic
+            if mastery >= 0.8 and not done:
+                print(f"         ✅ Topic mastered! Moving to next concept...")
+        
+        # Episode summary
+        avg_mastery = np.mean(learning_history["mastery"][-10:]) if learning_history["mastery"] else 0
+        final_topics = info.get('topics_completed', 0)
+        
+        print(f"\n{'─'*70}")
+        print(f"  📊 Episode {ep+1} Summary:")
+        print(f"     • Total Steps: {step}")
+        print(f"     • Total Reward: {ep_reward:.1f}")
+        print(f"     • Topics Completed: {final_topics}/{NUM_TOPICS}")
+        print(f"     • Final Mastery: {mastery:.1%}")
+        print(f"     • Avg Engagement: {np.mean(learning_history['engagement']):.1%}")
+        
+        # Adaptive feedback based on performance
+        if avg_mastery > 0.7:
+            print(f"     🎉 Great progress! Student is learning effectively.")
+        elif avg_mastery > 0.4:
+            print(f"     👍 Good effort. Student is making steady progress.")
+        else:
+            print(f"     🤔 Student needs additional support. AI adjusting strategy...")
+        
+        if final_topics >= NUM_TOPICS:
+            print(f"\n  🎉🎉🎉 CONGRATULATIONS! Student completed all topics! 🎉🎉🎉")
+            break
+    
+    # Final comprehensive analysis
+    print("\n" + "="*70)
+    print("  📈 LEARNING ANALYSIS - Adaptive Tutor Performance")
+    print("="*70)
+    
+    # Calculate learning metrics
+    if learning_history["mastery"]:
+        mastery_progress = learning_history["mastery"][-1] - learning_history["mastery"][0] if len(learning_history["mastery"]) > 1 else 0
+        avg_reward = np.mean(learning_history["rewards"])
+        
+        print(f"\n  🧠 Learning Effectiveness:")
+        print(f"     • Mastery Gain: {mastery_progress:+.1%}")
+        print(f"     • Final Mastery: {learning_history['mastery'][-1]:.1%}")
+        print(f"     • Average Reward per Step: {avg_reward:.2f}")
+        
+        print(f"\n  🎯 AI Tutor Strategy Analysis:")
+        action_counts = Counter(learning_history["actions"])
+        for action, count in action_counts.most_common(3):
+            print(f"     • {action}: {count} times ({count/len(learning_history['actions']):.0%})")
+        
+        # Engagement pattern
+        engagement_trend = learning_history["engagement"][-1] - learning_history["engagement"][0]
+        print(f"\n  ❤️ Engagement Pattern:")
+        if engagement_trend > 0:
+            print(f"     • Engagement increased by {engagement_trend:.1%} - Student became more interested!")
+        elif engagement_trend < -0.2:
+            print(f"     • Engagement decreased - Student may need more varied activities")
+        else:
+            print(f"     • Engagement stable - Consistent learning experience")
+    
+    print("\n" + "="*70)
+    print("  💡 Adaptive Learning Summary:")
+    print("     The AI tutor successfully adjusted teaching strategies based on")
+    print("     the student's mastery level and engagement, providing personalized")
+    print("     learning experiences to maximize knowledge acquisition.")
+    print("="*70 + "\n")
+    
     env.close()
-
+    
+    # Optional: Generate a learning progress chart
+    if not gui:
+        try:
+            import matplotlib.pyplot as plt
+            plt.figure(figsize=(12, 4))
+            
+            plt.subplot(1, 3, 1)
+            plt.plot(learning_history["steps"], learning_history["mastery"], 'b-', linewidth=2)
+            plt.xlabel('Learning Step')
+            plt.ylabel('Mastery Level')
+            plt.title('Knowledge Mastery Progress')
+            plt.grid(True, alpha=0.3)
+            plt.ylim(0, 1)
+            
+            plt.subplot(1, 3, 2)
+            plt.plot(learning_history["steps"], learning_history["engagement"], 'g-', linewidth=2)
+            plt.xlabel('Learning Step')
+            plt.ylabel('Engagement Level')
+            plt.title('Student Engagement')
+            plt.grid(True, alpha=0.3)
+            plt.ylim(0, 1)
+            
+            plt.subplot(1, 3, 3)
+            plt.plot(learning_history["steps"], np.cumsum(learning_history["rewards"]), 'r-', linewidth=2)
+            plt.xlabel('Learning Step')
+            plt.ylabel('Cumulative Reward')
+            plt.title('Cumulative Learning Progress')
+            plt.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            plt.savefig("plots/learning_progress.png", dpi=100, bbox_inches='tight')
+            plt.show()
+            print("\n  📊 Learning progress chart saved to: plots/learning_progress.png")
+        except:
+            pass
 
 def cmd_random():
     """

@@ -1,7 +1,6 @@
 """
 Malami - Shared Training Utilities
-====================================
-Plotting, evaluation, logging, and helper functions.
+
 """
 
 import os

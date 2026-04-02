@@ -8,8 +8,8 @@
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/malami_rl_summative
-cd malami_rl_summative
+git clone https://github.com/edith123321/malami-reinforcement-learning_project
+cd malami-reinforcement-learning_project
 
 # 2. Install dependencies (Python 3.10+)
 pip install -r requirements.txt
